@@ -4,11 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "claude-safety-guard"
-version = "0.1.0"
+version = "0.1.1"
 description = "A zero-dependency Claude Code PreToolUse guard that blocks destructive shell commands before they run."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Hinano Hart", email = "hinanohart@gmail.com" }]
 keywords = [
   "claude-code",

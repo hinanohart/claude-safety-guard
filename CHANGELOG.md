@@ -11,6 +11,18 @@ release.
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-04-18
+
+### Changed
+
+* `pyproject.toml` now declares `license = "Apache-2.0"` (SPDX
+  expression) plus `license-files = ["LICENSE", "NOTICE"]`, replacing
+  the older `{ file = "LICENSE" }` form that caused PyPI to render the
+  full license text in the project's "License" field. No runtime
+  behaviour change.
+* `release.yml` now auto-creates a GitHub Release (with the built
+  wheel + sdist attached) after the PyPI publish succeeds.
+
 ## [0.1.0] — 2026-04-18
 
 ### Added
