@@ -1,0 +1,106 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claude-safety-guard"
+version = "0.1.0"
+description = "A zero-dependency Claude Code PreToolUse guard that blocks destructive shell commands before they run."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Hinano Hart", email = "hinanohart@gmail.com" }]
+keywords = [
+  "claude-code",
+  "claude",
+  "safety",
+  "security",
+  "guard",
+  "hook",
+  "agent",
+  "pretooluse",
+  "bash",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: POSIX",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Shells",
+  "Typing :: Typed",
+]
+dependencies = [
+  # tomllib is stdlib on 3.11+; tomli provides the same API for 3.10.
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.6.0",
+  "mypy>=1.10",
+]
+
+[project.scripts]
+claude-safety-guard = "claude_safety_guard.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hinanohart/claude-safety-guard"
+Documentation = "https://github.com/hinanohart/claude-safety-guard#readme"
+Issues = "https://github.com/hinanohart/claude-safety-guard/issues"
+Changelog = "https://github.com/hinanohart/claude-safety-guard/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claude_safety_guard"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/",
+  "tests/",
+  "docs/",
+  "examples/",
+  "README.md",
+  "LICENSE",
+  "NOTICE",
+  "CHANGELOG.md",
+  "SECURITY.md",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-config --strict-markers"
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "PL", "RUF", "S", "SIM", "PIE"]
+ignore = [
+  "S101",  # asserts are fine in tests
+  "PLR0912", # pattern-heavy code has many branches by design
+  "PLR2004", # magic numbers are readable in security rules
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S603", "S607", "PLR2004"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

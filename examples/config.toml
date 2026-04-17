@@ -1,0 +1,25 @@
+# Example claude-safety-guard configuration.
+#
+# Place at one of, in priority order:
+#   $CLAUDE_SAFETY_GUARD_CONFIG
+#   $XDG_CONFIG_HOME/claude-safety-guard/config.toml
+#   ~/.config/claude-safety-guard/config.toml
+#
+# Every field is optional; omitting the file is equivalent to the defaults
+# below.
+
+# Pattern IDs to silently ignore even if they match.
+# Run `claude-safety-guard list-rules` to see every available ID.
+# Unknown IDs are dropped with a warning on stderr at load time.
+allowlist = [
+  # "git-clean-fdx",
+  # "supply-pip-from-url",
+]
+
+# When true, BLOCK findings are downgraded to WARN so nothing is actually
+# refused. Useful for a week of observation before turning enforcement on.
+dry_run = false
+
+# When true, WARN findings cause Claude Code to ask the user interactively
+# rather than passing through silently.
+ask_on_warn = false

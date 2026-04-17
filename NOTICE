@@ -1,0 +1,15 @@
+claude-safety-guard
+Copyright 2026 Hinano Hart
+
+Licensed under the Apache License, Version 2.0 (the "License"). See LICENSE
+for full terms.
+
+This product includes no third-party source code. The regex pattern catalog
+encodes well-known destructive shell-command shapes (rm -rf /, git push --force
+to protected branches, curl | sh, etc.) that are matters of general computing
+knowledge.
+
+Claude and Claude Code are trademarks of Anthropic, PBC. This project is not
+affiliated with or endorsed by Anthropic. The PreToolUse hook JSON schema that
+this package produces follows Claude Code's published hook protocol solely to
+enable interoperability.
