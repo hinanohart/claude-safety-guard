@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
 from claude_safety_guard.config import Config, default_config_path, load_config
+
+IS_WINDOWS = os.name == "nt"
 
 
 def test_missing_file_returns_default_config(tmp_path: Path) -> None:
@@ -82,6 +85,10 @@ def test_default_config_path_uses_xdg_config_home(monkeypatch: pytest.MonkeyPatc
     assert default_config_path() == Path("/xdg/home/claude-safety-guard/config.toml")
 
 
+@pytest.mark.skipif(
+    IS_WINDOWS,
+    reason="Windows resolves home via USERPROFILE + known-folder APIs, not $HOME",
+)
 def test_default_config_path_falls_back_to_home(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CLAUDE_SAFETY_GUARD_CONFIG", raising=False)
     monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)

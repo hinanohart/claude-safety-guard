@@ -25,7 +25,7 @@ from claude_safety_guard.patterns import all_pattern_ids
 if sys.version_info >= (3, 11):
     import tomllib  # pragma: no cover - stdlib since 3.11
 else:  # pragma: no cover - only exercised on 3.10 CI matrix
-    import tomli as tomllib  # type: ignore[no-redef, unused-ignore]
+    import tomli as tomllib  # type: ignore[no-redef, import-not-found, unused-ignore]
 
 
 @dataclass(frozen=True, slots=True)
