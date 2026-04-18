@@ -42,11 +42,19 @@ class Config:
     ask_on_warn:
         If True, the hook emits ``ask`` (prompt the user) on WARN instead
         of ``allow``. Off by default to avoid prompt fatigue.
+    fail_closed:
+        If True, any internal error (malformed stdin, regex crash, config
+        problem) is reported as ``ask`` so the user must explicitly confirm
+        rather than silently allowing the command. Off by default — a
+        broken hook still permits ordinary work — but security-conscious
+        users should turn it on to close the "crash the guard, get a free
+        pass" hole.
     """
 
     allowlist: frozenset[str] = field(default_factory=frozenset)
     dry_run: bool = False
     ask_on_warn: bool = False
+    fail_closed: bool = False
 
 
 def default_config_path() -> Path:
@@ -85,6 +93,27 @@ def load_config(path: Path | None = None) -> Config:
     return _from_dict(data)
 
 
+def _strict_bool(value: Any, *, key: str, default: bool) -> bool:
+    """Interpret ``value`` strictly as True/False.
+
+    ``bool("false")`` is ``True`` in Python because any non-empty string
+    is truthy. A user who types ``dry_run = "false"`` in TOML (a common
+    cross-format reflex — YAML / shell envs use strings for booleans)
+    would silently activate dry-run, downgrading every BLOCK to WARN.
+    Reject anything that isn't a real bool and use the default.
+    """
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        print(
+            f"claude-safety-guard: config key {key!r} must be a bool, "
+            f"got {type(value).__name__}={value!r}; using default={default}.",
+            file=sys.stderr,
+        )
+        return default
+    return value
+
+
 def _from_dict(data: dict[str, Any]) -> Config:
     raw_allow = data.get("allowlist", [])
     allowlist: frozenset[str]
@@ -103,6 +132,7 @@ def _from_dict(data: dict[str, Any]) -> Config:
 
     return Config(
         allowlist=allowlist,
-        dry_run=bool(data.get("dry_run", False)),
-        ask_on_warn=bool(data.get("ask_on_warn", False)),
+        dry_run=_strict_bool(data.get("dry_run"), key="dry_run", default=False),
+        ask_on_warn=_strict_bool(data.get("ask_on_warn"), key="ask_on_warn", default=False),
+        fail_closed=_strict_bool(data.get("fail_closed"), key="fail_closed", default=False),
     )

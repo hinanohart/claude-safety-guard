@@ -7,9 +7,12 @@ protocol and the CLI so the same engine drives every surface.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
+
+from claude_safety_guard.types import Severity
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -17,16 +20,14 @@ if TYPE_CHECKING:
     from claude_safety_guard.patterns import Pattern
 
 
-class Severity(str, Enum):
-    """Severity of a matched rule.
-
-    Using ``str`` as a mixin keeps the values JSON-serialisable without a
-    custom encoder, which matters because this package's primary surface is
-    a hook that speaks JSON over stdio.
-    """
-
-    BLOCK = "block"
-    WARN = "warn"
+__all__ = [
+    "Decision",
+    "EvaluationOptions",
+    "Finding",
+    "Outcome",
+    "Severity",
+    "evaluate",
+]
 
 
 class Outcome(str, Enum):
@@ -139,10 +140,7 @@ def evaluate(
     """
 
     if patterns is None:
-        # Deferred import to break the circular dependency between this module
-        # (which defines Severity/Pattern consumers) and patterns.py (which
-        # imports Severity). Pattern catalog is loaded on first use.
-        from claude_safety_guard.patterns import default_patterns  # noqa: PLC0415
+        from claude_safety_guard.patterns import default_patterns
 
         patterns = default_patterns()
     if options is None:
@@ -151,11 +149,18 @@ def evaluate(
     if not command or not command.strip():
         return Decision(outcome=Outcome.ALLOW, findings=(), command=command)
 
+    # Normalise before matching: fold full-width / compatibility forms
+    # (NFKC) and strip invisible format chars (category Cf: ZWJ, ZWSP,
+    # RLO/LRO, BOM, ...). This closes the "ｒｍ －ｒｆ ／" and
+    # "AKIA\u200DIOSFODNN7EXAMPLE" class of bypasses without making every
+    # individual regex carry the Unicode weight.
+    scan_target = _normalise_for_scan(command)
+
     findings: list[Finding] = []
     for pattern in patterns:
         if pattern.id in options.allowlist:
             continue
-        match = pattern.regex.search(command)
+        match = pattern.regex.search(scan_target)
         if match is None:
             continue
         findings.append(
@@ -170,6 +175,24 @@ def evaluate(
 
     outcome = _aggregate(findings, dry_run=options.dry_run)
     return Decision(outcome=outcome, findings=tuple(findings), command=command)
+
+
+def _normalise_for_scan(command: str) -> str:
+    """Fold compatibility forms and drop invisible format chars.
+
+    Implements two complementary defences against Unicode-based matcher
+    evasion:
+
+    * NFKC normalisation collapses full-width / small-form / Roman-numeral
+      compatibility codepoints into their ASCII equivalents, so ``ｒｍ``
+      becomes ``rm``.
+    * Removing category ``Cf`` (format) characters strips zero-width
+      joiners, zero-width spaces, RTL/LTR overrides, byte-order marks, and
+      other invisibles that shells happily ignore but regexes do not.
+    """
+
+    normalised = unicodedata.normalize("NFKC", command)
+    return "".join(ch for ch in normalised if unicodedata.category(ch) != "Cf")
 
 
 def _aggregate(findings: list[Finding], *, dry_run: bool) -> Outcome:

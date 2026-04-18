@@ -131,16 +131,16 @@ def run_hook(
     try:
         raw = stdin.read()
     except OSError:
-        return _emit_error(stdout, "failed to read stdin")
+        return _emit_error(stdout, "failed to read stdin", config=config)
     if not raw.strip():
         return _emit_allow(stdout)
 
     try:
         envelope = json.loads(raw)
     except json.JSONDecodeError:
-        return _emit_error(stdout, "stdin was not valid JSON")
+        return _emit_error(stdout, "stdin was not valid JSON", config=config)
     if not isinstance(envelope, dict):
-        return _emit_error(stdout, "stdin JSON was not an object")
+        return _emit_error(stdout, "stdin JSON was not an object", config=config)
 
     command = extract_command(envelope)
     if not command:
@@ -150,8 +150,15 @@ def run_hook(
         allowlist=frozenset(config.allowlist),
         dry_run=config.dry_run,
     )
-    decision_obj = evaluate(command, options=options)
-    hook_output = decide(decision_obj, config=config)
+    # Any regex crash / pattern-load bug must not leak past the hook — an
+    # uncaught exception would exit non-zero with no JSON on stdout, and
+    # Claude Code's default at that point is to let the Bash call through.
+    # That would turn a detector bug into a universal bypass.
+    try:
+        decision_obj = evaluate(command, options=options)
+        hook_output = decide(decision_obj, config=config)
+    except Exception as exc:  # noqa: BLE001 — we genuinely mean "any".
+        return _emit_error(stdout, f"evaluation crashed: {exc!r}", config=config)
 
     stdout.write(json.dumps(hook_output.to_envelope()) + "\n")
     return 0
@@ -162,13 +169,16 @@ def _emit_allow(stdout: Any) -> int:
     return 0
 
 
-def _emit_error(stdout: Any, message: str) -> int:
-    # Fail open, not closed: a broken hook must not brick the agent.
-    # The message is surfaced to the user so they can fix the configuration.
+def _emit_error(stdout: Any, message: str, *, config: Config | None = None) -> int:
+    # Default: fail open, not closed — a broken hook must not brick the agent.
+    # Security-conscious users flip ``fail_closed = true`` in config, which
+    # promotes errors to ``ask`` so the user is aware before any bypass.
+    # The message is surfaced to the user either way.
+    decision = "ask" if (config is not None and config.fail_closed) else "allow"
     stdout.write(
         json.dumps(
             HookOutput(
-                decision="allow",
+                decision=decision,
                 reason=f"[claude-safety-guard warning] {message}",
             ).to_envelope()
         )
