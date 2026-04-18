@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "claude-safety-guard"
-version = "0.1.1"
+version = "0.1.2"
 description = "A zero-dependency Claude Code PreToolUse guard that blocks destructive shell commands before they run."
 readme = "README.md"
 requires-python = ">=3.10"
