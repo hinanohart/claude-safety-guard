@@ -91,9 +91,14 @@ target-version = "py310"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "PL", "RUF", "S", "SIM", "PIE"]
 ignore = [
-  "S101",  # asserts are fine in tests
+  "S101",   # asserts are fine in tests
+  "PLR0911", # explicit early-exit pattern in hook dispatcher reads clearly
   "PLR0912", # pattern-heavy code has many branches by design
   "PLR2004", # magic numbers are readable in security rules
+  "PLC0415", # deferred imports avoid cycles in default-pattern loading
+  "RUF002", # intentional full-width characters in docstrings documenting bypass attacks
+  "RUF003", # intentional full-width characters in comments documenting bypass attacks
+  "E501",   # long reason= strings in pattern table remain readable unwrapped
 ]
 
 [tool.ruff.lint.per-file-ignores]

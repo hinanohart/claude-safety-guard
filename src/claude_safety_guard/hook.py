@@ -157,7 +157,7 @@ def run_hook(
     try:
         decision_obj = evaluate(command, options=options)
         hook_output = decide(decision_obj, config=config)
-    except Exception as exc:  # noqa: BLE001 — we genuinely mean "any".
+    except Exception as exc:
         return _emit_error(stdout, f"evaluation crashed: {exc!r}", config=config)
 
     stdout.write(json.dumps(hook_output.to_envelope()) + "\n")
