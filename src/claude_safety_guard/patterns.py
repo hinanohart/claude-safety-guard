@@ -83,9 +83,7 @@ _RM_RF_FLAGS = (
 #
 # Tier 1 (system-managed): the shell wiping these even with a deep path is
 # always a disaster — /etc/nginx, /usr/bin, /sys/kernel, etc. Match any depth.
-_CRITICAL_SYSTEM_DIRS = (
-    r"(?:etc|usr|bin|sbin|lib|lib32|lib64|boot|sys|proc|dev|srv)"
-)
+_CRITICAL_SYSTEM_DIRS = r"(?:etc|usr|bin|sbin|lib|lib32|lib64|boot|sys|proc|dev|srv)"
 # Tier 2A (per-user homes): ``/home/<user>`` is catastrophic (wipes a whole
 # account); `/home` alone wipes every account. Block bare + 1-segment.
 _CRITICAL_HOME_DIRS = r"(?:home)"
@@ -98,9 +96,7 @@ _CRITICAL_SCRATCH_DIRS = r"(?:tmp|var|opt|root)"
 # ``supply-*`` / ``pkg-*`` rules so we catch ``| bash`` AND ``| fish`` AND
 # ``| python3`` AND ``| perl`` etc.
 _SHELL_ALT = r"(?:bash|sh|zsh|ksh|dash|ash|fish|tcsh|csh|pwsh)"
-_INTERPRETER_ALT = (
-    r"(?:python(?:3(?:\.\d+)?)?|perl|ruby|node|deno|bun|lua|php|rhino|Rscript)"
-)
+_INTERPRETER_ALT = r"(?:python(?:3(?:\.\d+)?)?|perl|ruby|node|deno|bun|lua|php|rhino|Rscript)"
 
 # Block-device suffix alternation. Covers SCSI/SATA, NVMe, eMMC/SD, Xen,
 # KVM/virtio, legacy IDE, software RAID, loop mounts, and LVM mapper paths.
@@ -129,19 +125,24 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         # while still allowing legitimate deep paths like ``/home/alice/project``
         # or ``/tmp/project``.
         regex=_re(
-            r"\brm\s+(?:--[a-z-]+\s+)*" + _RM_RF_FLAGS + r"(?:\s+--[a-z-]+)*"
+            r"\brm\s+(?:--[a-z-]+\s+)*"
+            + _RM_RF_FLAGS
+            + r"(?:\s+--[a-z-]+)*"
             + r"\s+(?:"
             # Bare `/` or `/*`.
             + r"""/(?:\s|['"`;|&()<>]|$|\*)"""
             # `/etc`, `/etc/nginx`, `/etc/nginx/conf.d` — system dirs at any depth.
-            + r"|/" + _CRITICAL_SYSTEM_DIRS
+            + r"|/"
+            + _CRITICAL_SYSTEM_DIRS
             + r"""(?:/[^\s;|&'"`<>]*)?(?:\s|['"`;|&()<>]|$)"""
             # `/home` bare or `/home/<user>` one-segment-deep only.
-            + r"|/" + _CRITICAL_HOME_DIRS
+            + r"|/"
+            + _CRITICAL_HOME_DIRS
             + r"""(?:/[A-Za-z0-9_.-]+)?(?:\s|['"`;|&()<>]|$)"""
             # `/tmp` / `/var` / `/opt` / `/root` bare only — deep paths are
             # legitimate scratch / package work.
-            + r"|/" + _CRITICAL_SCRATCH_DIRS
+            + r"|/"
+            + _CRITICAL_SCRATCH_DIRS
             + r"""(?:\s|['"`;|&()<>]|$)"""
             + r")"
         ),
@@ -157,7 +158,9 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         severity=Severity.BLOCK,
         # ~, ~/, ~user, ~/<anything>, $HOME, ${HOME}, with or without quotes.
         regex=_re(
-            r"\brm\s+(?:--[a-z-]+\s+)*" + _RM_RF_FLAGS + r"(?:\s+--[a-z-]+)*"
+            r"\brm\s+(?:--[a-z-]+\s+)*"
+            + _RM_RF_FLAGS
+            + r"(?:\s+--[a-z-]+)*"
             + r"""\s+['"]?(?:~[a-zA-Z0-9_-]*|\$(?:HOME|\{HOME\}))['"]?"""
             + r"""(?:/[^\s;|&'"`<>]*)?(?=\s|['"`;|&()<>]|$)"""
         ),
@@ -173,7 +176,9 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         severity=Severity.BLOCK,
         # ., ./, .., ../, ./.., etc. Matches trailing slash + parent-dir.
         regex=_re(
-            r"\brm\s+(?:--[a-z-]+\s+)*" + _RM_RF_FLAGS + r"(?:\s+--[a-z-]+)*"
+            r"\brm\s+(?:--[a-z-]+\s+)*"
+            + _RM_RF_FLAGS
+            + r"(?:\s+--[a-z-]+)*"
             + r"""\s+\.{1,2}/?(?:\s|['"`;|&()<>]|$)"""
         ),
         reason=(
@@ -187,8 +192,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         category="filesystem",
         severity=Severity.BLOCK,
         regex=_re(
-            r"\brm\s+(?:--[a-z-]+\s+)*" + _RM_RF_FLAGS + r"(?:\s+--[a-z-]+)*"
-            + r"\s+/[^\s;|&<>]*\*"
+            r"\brm\s+(?:--[a-z-]+\s+)*" + _RM_RF_FLAGS + r"(?:\s+--[a-z-]+)*" + r"\s+/[^\s;|&<>]*\*"
         ),
         reason="Recursive force-delete of / with glob. Near-certain system destruction.",
     ),
@@ -199,8 +203,11 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         # find / ... -delete | -exec rm — functionally equivalent to rm -rf /.
         regex=_re(
             r"\bfind\s+/"
-            + r"(?:(?:" + _CRITICAL_SYSTEM_DIRS + r"|"
-            + _CRITICAL_HOME_DIRS + r")(?:/|\s|$))?"
+            + r"(?:(?:"
+            + _CRITICAL_SYSTEM_DIRS
+            + r"|"
+            + _CRITICAL_HOME_DIRS
+            + r")(?:/|\s|$))?"
             + r"[^|&;]*(?:-delete\b|-exec\s+rm\b)"
         ),
         reason=(
@@ -227,10 +234,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         category="filesystem",
         severity=Severity.BLOCK,
         regex=_re(r"\bshred\b[^|&;]*\s/dev/" + _DEV_BLOCK + r"\b"),
-        reason=(
-            "shred directly on a block device. Overwrites the raw disk; "
-            "irrecoverable."
-        ),
+        reason=("shred directly on a block device. Overwrites the raw disk; irrecoverable."),
     ),
     Pattern(
         id="fs-dd-to-device",
@@ -256,8 +260,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         # World-writable on /, with or without -R. Classic footgun.
         regex=_re(r"\bchmod\s+(?:-R\s+)?0*777\s+/\s*$"),
         reason=(
-            "World-writable permissions on /. Makes the entire system a "
-            "single trust boundary."
+            "World-writable permissions on /. Makes the entire system a single trust boundary."
         ),
     ),
     Pattern(
@@ -266,9 +269,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         severity=Severity.BLOCK,
         # Recursive chmod on a critical top-level dir, any mode.
         regex=_re(
-            r"\bchmod\s+-R\s+\S+\s+/(?:(?:"
-            + _CRITICAL_SYSTEM_DIRS
-            + r"|home|root)(?:/|\s|$)|\s|$)"
+            r"\bchmod\s+-R\s+\S+\s+/(?:(?:" + _CRITICAL_SYSTEM_DIRS + r"|home|root)(?:/|\s|$)|\s|$)"
         ),
         reason=(
             "Recursive chmod on /, /etc, /usr, /home, /root etc. Smashes "
@@ -280,9 +281,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         category="filesystem",
         severity=Severity.BLOCK,
         regex=_re(
-            r"\bchown\s+-R\s+\S+\s+/(?:(?:"
-            + _CRITICAL_SYSTEM_DIRS
-            + r"|home|root)(?:/|\s|$)|\s|$)"
+            r"\bchown\s+-R\s+\S+\s+/(?:(?:" + _CRITICAL_SYSTEM_DIRS + r"|home|root)(?:/|\s|$)|\s|$)"
         ),
         reason=(
             "Recursive chown on /, /etc, /usr, /home, /root etc. Flips "
@@ -366,10 +365,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         category="git",
         severity=Severity.BLOCK,
         regex=_re(r"\bgit\s+push\b[^|&;]*(?<!\S)--no-verify(?:=\S*)?(?=\s|=|$)"),
-        reason=(
-            "``git push --no-verify`` bypasses pre-push hooks, including "
-            "local policy gates."
-        ),
+        reason=("``git push --no-verify`` bypasses pre-push hooks, including local policy gates."),
     ),
     Pattern(
         id="git-hookspath-disable",
@@ -423,8 +419,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
             r"[^|]*\|\s*(?:curl|wget|nc|ncat|httpie|socat)\b"
         ),
         reason=(
-            "Piping a secret file into a network client. This is the classic "
-            "exfiltration shape."
+            "Piping a secret file into a network client. This is the classic exfiltration shape."
         ),
     ),
     Pattern(
@@ -500,9 +495,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         regex=_re(
             r"\b(?:curl|wget|fetch)\s+[^|&;]*\|"
             r"\s*(?:[^|&;]*\|\s*)*"
-            r"(?:sudo(?:\s+-[a-zA-Z]+| --\w[\w-]*| \w+)*\s+)?"
-            + _SHELL_ALT
-            + r"\b"
+            r"(?:sudo(?:\s+-[a-zA-Z]+| --\w[\w-]*| \w+)*\s+)?" + _SHELL_ALT + r"\b"
         ),
         reason=(
             "Piping a downloaded script directly (or via any pipeline chain) "
@@ -517,9 +510,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         regex=_re(
             r"\b(?:curl|wget|fetch)\s+[^|&;]*\|"
             r"\s*(?:[^|&;]*\|\s*)*"
-            r"(?:sudo(?:\s+-[a-zA-Z]+| --\w[\w-]*| \w+)*\s+)?"
-            + _INTERPRETER_ALT
-            + r"\b"
+            r"(?:sudo(?:\s+-[a-zA-Z]+| --\w[\w-]*| \w+)*\s+)?" + _INTERPRETER_ALT + r"\b"
         ),
         reason=(
             "Piping a downloaded script (directly or via pipeline) into a "
@@ -532,9 +523,7 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         category="supply-chain",
         severity=Severity.BLOCK,
         # ``bash <(curl ...)`` — process substitution variant of curl|bash.
-        regex=_re(
-            r"\b" + _SHELL_ALT + r"\s+<\(\s*(?:curl|wget|fetch)\b"
-        ),
+        regex=_re(r"\b" + _SHELL_ALT + r"\s+<\(\s*(?:curl|wget|fetch)\b"),
         reason=(
             "Process-substitution variant of curl|bash (``bash <(curl ...)``). "
             "Same risk shape as supply-curl-bash."
