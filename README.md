@@ -13,6 +13,8 @@ goal is a **loud stop, not silent cleverness**: every rule has a stable ID,
 a human-readable reason, and can be allowlisted individually without
 losing coverage of the rest of the catalog.
 
+> **Disclaimer:** This is an **independent third-party tool**. It is **not affiliated with, endorsed by, or sponsored by Anthropic**. "Claude" and "Claude Code" are trademarks of Anthropic and are used here nominatively to identify the official CLI this hook integrates with.
+
 [claude-code]: https://docs.claude.com/en/docs/claude-code
 
 ---
