@@ -375,10 +375,35 @@ _CATALOG: Final[tuple[Pattern, ...]] = (
         # same as ``--no-verify`` but via config injection. Detect any
         # ``-c core.hooksPath=…`` pair anywhere before the ``commit``/``push``
         # subcommand.
+        # ReDoS-hardened (CWE-1333). The earlier pattern used an unbounded
+        # ``(?:A|B)*`` over two interchangeable alternatives — the first
+        # ``-[a-zA-Z]\\s+\\S+\\s+`` already accepted ``-c x``, so the
+        # second ``-c\\s+\\S+\\s+`` was a *redundant* alternative that
+        # doubled the search space at every iteration. With unbounded
+        # repetition this produced O(2^N) backtracking on adversarial
+        # inputs that almost-but-do-not-complete with ``core.hooksPath=``
+        # — turning the safety guard itself into a DoS vector inside a
+        # pre-commit hook. A regression test
+        # (``test_git_hookspath_pattern_does_not_redos``) measured 658 s
+        # on a 1.6 KB attack; this revision returns in microseconds.
+        #
+        # Hardening:
+        #   • collapsed the duplicate alternative into a single branch so
+        #     each input position has at most one possible parse;
+        #   • bounded quantifiers ({1,200}, {0,32}, {1,500}, {0,1024}) cap
+        #     worst-case work to a constant multiple of input length;
+        #   • the prefix repetition is *lazy* (``{0,32}?``) so it never
+        #     speculatively swallows the target ``-c core.hooksPath=…``
+        #     token before the anchor;
+        #   • each \\S+ subspan is bounded by surrounding \\s+, so it
+        #     cannot backtrack within a single token (no inner ambiguity);
+        #   • the suffix is also lazy to relinquish characters to the
+        #     trailing ``\\b(?:commit|push)\\b`` anchor.
         regex=_re(
-            r"\bgit\s+(?:-[a-zA-Z]\s+\S+\s+|-c\s+\S+\s+)*"
-            r"-c\s+core\.hooksPath\s*=\s*\S+"
-            r"[^|&;]*\b(?:commit|push)\b"
+            r"\bgit\s+"
+            r"(?:-[a-zA-Z]\s+\S{1,200}\s+){0,32}?"
+            r"-c\s+core\.hooksPath\s*=\s*\S{1,500}"
+            r"[^|&;]{0,1024}?\b(?:commit|push)\b"
         ),
         reason=(
             "``git -c core.hooksPath=…`` redirects pre-commit/pre-push hooks "

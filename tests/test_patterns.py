@@ -192,6 +192,46 @@ def test_pattern_ids_are_kebab_case() -> None:
         assert pat.match(p.id), f"{p.id!r} is not kebab-case"
 
 
+def test_git_hookspath_pattern_does_not_redos() -> None:
+    """ReDoS regression (CWE-1333): the ``git-hookspath-disable`` pattern must
+    complete in well under 100 ms even on adversarial inputs that would
+    have caused exponential backtracking before the fix.
+
+    Pre-fix, the catalog used ``(?:-[a-zA-Z]\\s+\\S+\\s+|-c\\s+\\S+\\s+)*`` —
+    two interchangeable alternatives, each unbounded, repeated unbounded
+    times. An attacker-controlled diff containing many ``-c x`` tokens that
+    almost-but-do-not-end-in ``core.hooksPath=`` exploded the matcher into
+    the worst case of O(2^N) backtracking, hanging the safety guard inside
+    a pre-commit hook.
+
+    Post-fix, all sub-quantifiers are bounded ({1,200} / {0,32} / {0,1024}),
+    making total work strictly linear in the input length. We assert the
+    pattern (a) still does not falsely fire on the no-match input and
+    (b) returns in <100 ms.
+    """
+    import time
+
+    # Adversarial input: many `-c x` tokens followed by no `core.hooksPath=`
+    # — the regex must rule the whole input out, which is precisely the
+    # scenario that explodes a vulnerable alternation.
+    attack = "git " + ("-c x " * 200) + ("extra " * 100) + "commit"
+    start = time.perf_counter()
+    decision = evaluate(attack)
+    elapsed = time.perf_counter() - start
+
+    matched = {f.pattern_id for f in decision.findings}
+    assert "git-hookspath-disable" not in matched, (
+        "git-hookspath-disable must not falsely fire on inputs without "
+        f"core.hooksPath=; matched: {sorted(matched)}"
+    )
+    assert elapsed < 0.1, (
+        "ReDoS regression: git-hookspath-disable pattern took "
+        f"{elapsed*1000:.1f} ms on a {len(attack)}-byte adversarial input "
+        "(expected < 100 ms). The catalog regex has likely regressed to an "
+        "unbounded quantifier; restore the bounded form."
+    )
+
+
 def test_string_quoting_is_not_bypassed() -> None:
     """A command containing the pattern inside single-quoted strings still matches.
 

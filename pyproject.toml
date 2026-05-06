@@ -4,10 +4,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "claude-safety-guard"
-version = "0.1.2"
+version = "0.2.0"
 description = "A zero-dependency Claude Code PreToolUse guard that blocks destructive shell commands before they run."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Hinano Hart", email = "hinanohart@gmail.com" }]
@@ -31,7 +31,6 @@ classifiers = [
   "Operating System :: MacOS",
   "Operating System :: Microsoft :: Windows",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -40,10 +39,7 @@ classifiers = [
   "Topic :: System :: Shells",
   "Typing :: Typed",
 ]
-dependencies = [
-  # tomllib is stdlib on 3.11+; tomli provides the same API for 3.10.
-  "tomli>=2.0; python_version < '3.11'",
-]
+dependencies = []  # zero-dep: tomllib is stdlib on Python ≥ 3.11
 
 [project.optional-dependencies]
 dev = [
@@ -86,7 +82,7 @@ filterwarnings = ["error"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "PL", "RUF", "S", "SIM", "PIE"]
@@ -105,7 +101,7 @@ ignore = [
 "tests/*" = ["S101", "S603", "S607", "PLR2004"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
